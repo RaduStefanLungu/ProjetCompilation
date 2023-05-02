@@ -70,12 +70,7 @@ dumbo = dumbo_parser.parse
 
 
 def main():
-    while True:
-        try:
-            s = input('> ')
-        except EOFError:
-            break
-        print(dumbo(s))
+    print("%s","HELLOW")
 
 sentence = '''<html>Case:{{print 'hi';}}</html>'''
 

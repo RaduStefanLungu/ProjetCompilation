@@ -29,6 +29,7 @@ calc_grammar = """
     %import common.CNAME -> NAME
     %import common.NUMBER
     %import common.WS_INLINE
+
     %ignore WS_INLINE
 """
 

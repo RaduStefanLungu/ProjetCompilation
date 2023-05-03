@@ -38,7 +38,7 @@ dumbo_grammar = """
         | programme2
     programme2: dumbo_bloc | dumbo_bloc programme
     txt: charactere*
-    charactere: /[A-Za-z_0-9]/|"<"|">"|"/" | ":" | "_" 
+    charactere: /[A-Za-z_0-9]/ | /</ | />/ | /:/ | /\//
     dumbo_bloc: "{{" expressions_list "}}"
     expressions_list: expression ";" expressions_list
         | expression ";"
@@ -52,7 +52,7 @@ dumbo_grammar = """
         | string_expression "." string_expression
     string_list: "(" string_list_interior ")"
     string_list_interior: string | string "," string_list_interior
-    variable: ("_"|"a"|"b"|"c"|"d"|"e"|"f"|"g"|"h"|"i"|"j"|"k"|"l"|"m"|"n"|"o"|"p"|"q"|"r"|"s"|"t"|"u"|"v"|"w"|"x"|"y"|"z") ("_"|"a"|"b"|"c"|"d"|"e"|"f"|"g"|"h"|"i"|"j"|"k"|"l"|"m"|"n"|"o"|"p"|"q"|"r"|"s"|"t"|"u"|"v"|"w"|"x"|"y"|"z"|"0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9")*
+    variable: ( /_/ | /[A-Za-z]/) /[A-Za-z]/*
     string: "'" charactere* "'"
 
     
@@ -66,11 +66,15 @@ dumbo_parser = Lark(dumbo_grammar, start='programme', ambiguity='explicit')
 
 dumbo = dumbo_parser.parse
 
-
 def main():
     print("%s","HELLOW")
 
-sentence = '''<html>Case:{{print 'hi';}}</html>'''
+sentence = '''<html>Case:{{
+            _Axel := ('Baby','Shark') ;
+            for _el in _Axel do 
+                print 'Ok';
+            endfor
+            }}</html>'''
 
 def test():
     print(dumbo_parser.parse(sentence).pretty())

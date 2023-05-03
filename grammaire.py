@@ -44,7 +44,7 @@ dumbo_grammar = """
     dumbo_bloc: "{{" expressions_list "}}"
     expressions_list: expression ";" expressions_list
         | expression ";"
-    expression: "print" string_expression
+    expression: "print" string_expression                                   -> f_print
         | "for" variable "in" string_list "do" expressions_list "endfor"
         | "for" variable "in" variable "do" expressions_list "endfor"
         | variable ":=" string_expression
@@ -66,9 +66,17 @@ dumbo_grammar = """
 """
 
 
-dumbo_parser = Lark(dumbo_grammar, start='programme', ambiguity='explicit')
+class OptimusPrime(Transformer):
+    
+    def __init__(self):
+        self.vars={}
+
+    def f_print(self,value):
+        print(value)
+        return value
 
 
+dumbo_parser = Lark(dumbo_grammar,parser='lalr',start='programme', ambiguity='explicit',transformer=OptimusPrime())
 dumbo = dumbo_parser.parse
 
 def main():
@@ -115,14 +123,18 @@ sentence3 = '''
 ana_gram_1 = '''
         {{
         nom := 'Marry';
+        print 'JINXED' ;
         _Jinx := 69;
         }}
 '''
 
+def run(program):
+    dumbo_tree = dumbo_parser.parse
+    dumbo_tree(program)
 
-def test():
-    print(dumbo_parser.parse(ana_gram_1).pretty())
+def test_special(program):
+    run(program)
 
 if __name__ == '__main__':
-    test()
+    test_special(ana_gram_1)
     # main()

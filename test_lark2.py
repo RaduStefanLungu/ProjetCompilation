@@ -60,7 +60,9 @@ def run_instruction(t):
 
 def run_turtle(program):
     parse_tree = parser.parse(program)
+    print(parse_tree.pretty())
     for inst in parse_tree.children:
+        print(inst)
         run_instruction(inst)
 
 def main():
@@ -81,5 +83,5 @@ def test():
     run_turtle(text)
 
 if __name__ == '__main__':
-    # test()
-    main()
+    test()
+    # main()

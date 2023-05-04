@@ -39,7 +39,7 @@ dumbo_grammar = """
         | txt programme2
         | programme2
     programme2: dumbo_bloc | dumbo_bloc programme
-    txt: charactere*
+    txt: charactere+
     charactere: /[A-Za-z_0-9]/ | /</ | />/ | /:/ | /\// | /=/ | /"/ | /,/
     dumbo_bloc: "{{" expressions_list "}}"
     expressions_list: expression ";" expressions_list
@@ -48,17 +48,22 @@ dumbo_grammar = """
         | "for" variable "in" string_list "do" expressions_list "endfor"
         | "for" variable "in" variable "do" expressions_list "endfor"
         | variable ":=" string_expression                                   -> f_assign_var
-        | variable ":=" string_list
-        | variable ":=" numbers
+        | variable ":=" string_list                                         -> f_assign_var
+        | variable ":=" numbers                                             -> f_assign_var
     string_expression: string
         | variable
         | string_expression "." string_expression
-    string_list: "(" string_list_interior ")"
+    string_list: "(" string_list_interior ")"                               -> str_list
     string_list_interior: string | string "," string_list_interior
     variable: ( /_/ | /[A-Za-z]/) /[A-Za-z_0-9]/*
     string: "'" charactere* "'"
-    numbers: integer | float
-    float: integer+ "." integer*
+    numbers: integer                                                        -> int
+        | float1                                                            -> flt1
+        | float2                                                            -> flt2
+        | float3                                                            -> flt3
+    float1: integer "." integer
+    float2: integer "."
+    float3: "." integer
     integer: /[0-9]/+
     
     %import common.WS
@@ -83,17 +88,11 @@ dumbo_parser = Lark(dumbo_grammar,start='programme', ambiguity='explicit')
 dumbo = dumbo_parser.parse
 
 variables = {}
-PRINTER = "template"
+#PRINTER = "template"
 
 def run_instructions(t):
-
     if t.data == 'f_print':
-        # print(string_constructor_2(t.iter_subtrees_topdown()))
-        temp = string_constructor_2(t.children[0].children[0].children)
-        if PRINTER != temp :
-            PRINTER = temp
-            print(PRINTER)
-        # print(t.children)
+        print(string_constructor_2(t.children[0].children[0].children))
 
     elif t.data == 'f_assign_var':
         
@@ -115,6 +114,21 @@ def run_instructions(t):
             elif x.data == 'variable':
                 the_value = variables.get(string_constructor_from_token(x.children))
 
+            elif x.data == 'int':
+                the_value = int_constructor(x.children)
+
+            elif x.data == 'flt1':
+                the_value = float1_constructor(x.children)
+
+            elif x.data == 'flt2':
+                the_value = float2_constructor(x.children)
+
+            elif x.data == 'flt3':
+                the_value = float3_constructor(x.children)
+
+            elif x.data == 'str_list':
+                the_value = str_list_constructor(x.children[0])
+
         variables[the_variable] = the_value
 
 def string_constructor_2(list):
@@ -129,7 +143,40 @@ def string_constructor_from_token(token_list):
         string += token.value
     return string
 
+def integer_constructor(numbers):
+    string = ""
+    for number in numbers.children:
+        string += number.value
+    return string
 
+def int_constructor(numbers):
+    return int(integer_constructor(numbers[0]))
+
+def float1_constructor(numbers):
+    int1 = integer_constructor(numbers[0].children[0])
+    int2 = integer_constructor(numbers[0].children[1])
+    return(float(int1 + "." + int2))
+
+def float2_constructor(numbers):
+    int1 = integer_constructor(numbers[0].children[0])
+    return(float(int1 + "."))
+
+def float3_constructor(numbers):
+    int1 = integer_constructor(numbers[0].children[0])
+    return(float("." + int1))
+
+def string_list_constructor(list_inter):
+    #print(list_inter)
+    string = ""
+    #print(list_inter.children[0])
+    string += string_constructor_2(list_inter.children[0].children)
+    if len(list_inter.children) == 2:
+        string += ", "
+        string += string_list_constructor(list_inter.children[1])
+    return(string)
+
+def str_list_constructor(list_inter):
+    return("(" + string_list_constructor(list_inter) + ")")
 
 def run(program):
     dumbo_tree = dumbo_parser.parse(program)
@@ -183,8 +230,12 @@ ana_gram_1 = '''
         {{
         nom := 'Marry';
         my_var := nom;
-        print 'JINXED' ;
+        print 'JINXED';
         _Jinx := 69;
+        nbr1 := 42.05;
+        nbr2 := 1312.;
+        nb3 := .22;
+        liste := ('un', 'deux', 'trois');
         }}
 '''
 

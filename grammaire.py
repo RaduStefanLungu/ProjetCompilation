@@ -39,13 +39,13 @@ dumbo_grammar = """
         | txt programme2
         | programme2
     programme2: dumbo_bloc | dumbo_bloc programme
-    txt: charactere+
+    txt: charactere+                                                        -> f_text
     charactere: /[A-Za-z_0-9]/ | /</ | />/ | /:/ | /\// | /=/ | /"/ | /,/
     dumbo_bloc: "{{" expressions_list "}}"
     expressions_list: expression ";" expressions_list
         | expression ";"
     expression: "print" string_expression                                   -> f_print
-        | "for" variable "in" string_list "do" expressions_list "endfor"
+        | "for" variable "in" string_list "do" expressions_list "endfor"    -> f_for
         | "for" variable "in" variable "do" expressions_list "endfor"
         | variable ":=" string_expression                                   -> f_assign_var
         | variable ":=" string_list                                         -> f_assign_var
@@ -92,7 +92,15 @@ variables = {}
 
 def run_instructions(t):
     if t.data == 'f_print':
-        print(string_constructor_2(t.children[0].children[0].children))
+        #print(t)
+        st = t.children[0].children[0]
+        #print(st.data)
+        if st.data == 'string':
+            #print(st.children[0].children)
+            print(string_constructor_2(st.children))
+        elif st.data == 'variable':
+            #print(st.children[0].children)
+            print(variables.get(string_constructor_from_token(st.children)))
 
     elif t.data == 'f_assign_var':
         
@@ -130,6 +138,13 @@ def run_instructions(t):
                 the_value = str_list_constructor(x.children[0])
 
         variables[the_variable] = the_value
+
+    elif t.data == 'f_text':
+        print(string_constructor_2(t.children))
+
+    elif t.data == 'f_for':
+        #print(t.children[1])
+        print(str_list_constructor(t.children[1].children[0]))
 
 def string_constructor_2(list):
     string = ""
@@ -180,6 +195,7 @@ def str_list_constructor(list_inter):
 
 def run(program):
     dumbo_tree = dumbo_parser.parse(program)
+    #print(dumbo_tree)
     # dumbo_tree(program)
 
 
@@ -227,16 +243,22 @@ sentence3 = '''
 '''
 
 ana_gram_1 = '''
+        <bal>
+        texte1
         {{
         nom := 'Marry';
         my_var := nom;
+        print my_var;
         print 'JINXED';
         _Jinx := 69;
         nbr1 := 42.05;
         nbr2 := 1312.;
         nb3 := .22;
         liste := ('un', 'deux', 'trois');
+        for num in ('quatre', 'cinq', 'six') do print num; endfor;
         }}
+        texte2
+        </bal>
 '''
 
 if __name__ == '__main__':

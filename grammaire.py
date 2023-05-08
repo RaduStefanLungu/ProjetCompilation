@@ -256,7 +256,7 @@ def run_tree(tree):
         if inst.data == 'f_for':
             temp = calc_number_of_expression_list(inst.children[2])
         
-        if inst.data == 'f_print':
+        if inst.data == 'f_print' or inst.data == 'f_assign_var':
             temp = temp - 1
             if temp < 0:
                 run_instructions(inst)
@@ -342,7 +342,7 @@ ana_gram_2 = '''
         for num in chiffres
             do 
                 print 'hi';
-                print num;
+                valor := num;
         endfor;
         print 'Hi Mama';
         }}
@@ -351,5 +351,5 @@ ana_gram_2 = '''
 '''
 
 if __name__ == '__main__':
-    run(ana_gram_1)
+    run(ana_gram_2)
     # main()

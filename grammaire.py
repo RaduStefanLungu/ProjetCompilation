@@ -91,6 +91,7 @@ variables = {}
 #PRINTER = "template"
 
 def run_instructions(t):
+    # print(t)
     if t.data == 'f_print':
         #print(t)
         st = t.children[0].children[0]
@@ -149,8 +150,6 @@ def run_instructions(t):
         type_of_list = t.children[1].children[0].data   # string_list_interior or variable
         in_list = []
         if type_of_list == 'string_list_interior':
-            print('inside string_list_interior')
-            print('\n')
             children = t.children[1].children[0].children
             if len(children) == 2 :
                 while len(children) == 2:
@@ -159,19 +158,17 @@ def run_instructions(t):
             if len(children) == 1 :
                 in_list.append(string_constructor_2(children[0].children))
 
-            print(in_list)
-
         elif type_of_list == 'variable':
             print('variable')
         
         save_variables = variables
 
         for i in in_list:
-            print(i)
+            # print(i)
             #variables = variables
             #variables[for_variable_name] = i
-            #print(t.children[2])
-            #run_instructions(t.children[2])
+            # print(t.children[2].children[0])
+            run_instructions(t.children[2].children[0])
             #variables = save_variables
 
 def string_constructor_2(list):
@@ -228,11 +225,10 @@ def run(program):
 
 
     for inst in dumbo_tree.iter_subtrees_topdown():
-        #print(inst.data)
+        run_instructions(inst)
         if inst.data == 'f_for':
-            run_instructions(inst)
-            return
-    print(variables)
+            break
+    # print(variables)
 
 
 sentence = '''<html>Case:{{

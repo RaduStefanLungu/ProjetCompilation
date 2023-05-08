@@ -45,11 +45,13 @@ dumbo_grammar = """
     expressions_list: expression ";" expressions_list
         | expression ";"
     expression: "print" string_expression                                   -> f_print
-        | "for" variable "in" string_list "do" expressions_list "endfor"    -> f_for
-        | "for" variable "in" variable "do" expressions_list "endfor"
+        | for_block                                                         
         | variable ":=" string_expression                                   -> f_assign_var
         | variable ":=" string_list                                         -> f_assign_var
         | variable ":=" numbers                                             -> f_assign_var
+    for_block:
+        | "for" variable "in" string_list "do" expressions_list "endfor"    -> f_for
+        | "for" variable "in" variable "do" expressions_list "endfor"
     string_expression: string
         | variable
         | string_expression "." string_expression
@@ -69,7 +71,6 @@ dumbo_grammar = """
     %import common.WS
     %ignore WS
 """
-
 
 # class OptimusPrime(Transformer):
     
@@ -144,7 +145,8 @@ def run_instructions(t):
         print(string_constructor_2(t.children))
 
     elif t.data == 'f_for':
-        #print(t)
+        # print(t)
+        # print(len(t.children))
         for_variable_name = string_constructor_from_token(t.children[0].children)
         print(for_variable_name)
         type_of_list = t.children[1].children[0].data   # string_list_interior or variable
@@ -223,12 +225,30 @@ def run(program):
     #print(dumbo_tree)
     # dumbo_tree(program)
 
+    run_tree(dumbo_tree.iter_subtrees_topdown())
 
-    for inst in dumbo_tree.iter_subtrees_topdown():
-        run_instructions(inst)
+
+def run_tree(tree):
+    temp = 0
+    for inst in tree:
+        # print('\n')
+        # print(inst)
+        # print(temp)
+        # print(inst.data)
         if inst.data == 'f_for':
-            break
-    # print(variables)
+            temp = calc_number_of_expression_list(inst.children[2])
+        
+        elif inst.data == 'expressions_list':
+            temp = temp - 1
+
+        if temp == 0 or temp == 2: 
+            run_instructions(inst)
+        
+def calc_number_of_expression_list(expression_list):
+    if len(expression_list.children) == 2 :
+        return 1 + calc_number_of_expression_list(expression_list.children[1])
+    else:
+        return 1
 
 
 sentence = '''<html>Case:{{
@@ -296,8 +316,11 @@ ana_gram_2 = '''
         {{
         liste := ('un', 'deux', 'trois');
         for num in ('quatre', 'cinq', 'six') 
-            do print 'print';
+            do 
+                print 'hi';
+                print 'jax';
         endfor;
+        print 'Hi Mama';
         }}
         texte2
         </bal>

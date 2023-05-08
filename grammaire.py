@@ -143,7 +143,9 @@ def run_instructions(t):
         print(string_constructor_2(t.children))
 
     elif t.data == 'f_for':
-
+        #print(t)
+        for_variable_name = string_constructor_from_token(t.children[0].children)
+        print(for_variable_name)
         type_of_list = t.children[1].children[0].data   # string_list_interior or variable
         in_list = []
         if type_of_list == 'string_list_interior':
@@ -164,12 +166,13 @@ def run_instructions(t):
         
         save_variables = variables
 
-        ## for loop
-
-        print('\n')
-        for_variable_name = string_constructor_from_token(t.children[0].children)
-        print(str_list_constructor(t.children[1].children[0]))
-        print('\n')
+        for i in in_list:
+            print(i)
+            #variables = variables
+            #variables[for_variable_name] = i
+            #print(t.children[2])
+            #run_instructions(t.children[2])
+            #variables = save_variables
 
 def string_constructor_2(list):
     string = ""
@@ -225,7 +228,10 @@ def run(program):
 
 
     for inst in dumbo_tree.iter_subtrees_topdown():
-        run_instructions(inst)
+        #print(inst.data)
+        if inst.data == 'f_for':
+            run_instructions(inst)
+            return
     print(variables)
 
 
@@ -294,7 +300,7 @@ ana_gram_2 = '''
         {{
         liste := ('un', 'deux', 'trois');
         for num in ('quatre', 'cinq', 'six') 
-            do print num;
+            do print 'print';
         endfor;
         }}
         texte2

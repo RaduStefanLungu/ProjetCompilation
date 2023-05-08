@@ -51,11 +51,11 @@ dumbo_grammar = """
         | variable ":=" numbers                                             -> f_assign_var
     for_block:
         | "for" variable "in" string_list "do" expressions_list "endfor"    -> f_for
-        | "for" variable "in" variable "do" expressions_list "endfor"
+        | "for" variable "in" variable "do" expressions_list "endfor"       -> f_for
     string_expression: string
         | variable
         | string_expression "." string_expression
-    string_list: "(" string_list_interior ")"                               -> str_list
+    string_list: "(" string_list_interior ")"
     string_list_interior: string | string "," string_list_interior
     variable: ( /_/ | /[A-Za-z]/) /[A-Za-z_0-9]/*
     string: "'" charactere* "'"
@@ -136,8 +136,15 @@ def run_instructions(t):
             elif x.data == 'flt3':
                 the_value = float3_constructor(x.children)
 
-            elif x.data == 'str_list':
-                the_value = str_list_constructor(x.children[0])
+            elif x.data == 'string_list':
+                the_value = []
+                children = x.children[0].children
+                if len(children) == 2 :
+                    while len(children) == 2:
+                        the_value.append(string_constructor_2(children[0].children))
+                        children = children[1].children
+                if len(children) == 1 :
+                    the_value.append(string_constructor_2(children[0].children))
 
         variables[the_variable] = the_value
 
@@ -145,13 +152,12 @@ def run_instructions(t):
         print(string_constructor_2(t.children))
 
     elif t.data == 'f_for':
-        # print(t)
-        # print(len(t.children))
         for_variable_name = string_constructor_from_token(t.children[0].children)
-        print(for_variable_name)
-        type_of_list = t.children[1].children[0].data   # string_list_interior or variable
+        #print(for_variable_name)
+        #print(t.children[1].data)
+        type_of_list = t.children[1].data   # string_list_interior or variable
         in_list = []
-        if type_of_list == 'string_list_interior':
+        if type_of_list == 'string_list':
             children = t.children[1].children[0].children
             if len(children) == 2 :
                 while len(children) == 2:
@@ -161,17 +167,27 @@ def run_instructions(t):
                 in_list.append(string_constructor_2(children[0].children))
 
         elif type_of_list == 'variable':
-            print('variable')
+            liste = variables.get(string_constructor_from_token(t.children[1].children))
+            for e in liste:
+                in_list.append(e)
         
-        save_variables = variables
+        save_variables ={}
+        for k in variables.keys():
+                save_variables[k] = variables[k]
 
         for i in in_list:
-            # print(i)
-            #variables = variables
-            #variables[for_variable_name] = i
-            # print(t.children[2].children[0])
-            run_instructions(t.children[2].children[0])
-            #variables = save_variables
+            variables[for_variable_name] = i
+            for chil in t.children[2].children:
+                if chil.data == 'expressions_list':
+                    chil = chil.children[0]
+                run_instructions(chil)
+            cles =[]
+            for k in variables.keys():
+                cles.append(k)
+            for k in cles:
+                del variables[k]
+            for k in save_variables.keys():
+                variables[k] = save_variables[k]
 
 def string_constructor_2(list):
     string = ""
@@ -207,6 +223,7 @@ def float3_constructor(numbers):
     int1 = integer_constructor(numbers[0].children[0])
     return(float("." + int1))
 
+"""
 def string_list_constructor(list_inter):
     #print(list_inter)
     string = ""
@@ -219,6 +236,7 @@ def string_list_constructor(list_inter):
 
 def str_list_constructor(list_inter):
     return("(" + string_list_constructor(list_inter) + ")")
+"""
 
 def run(program):
     dumbo_tree = dumbo_parser.parse(program)
@@ -229,19 +247,20 @@ def run(program):
 
 
 def run_tree(tree):
-    temp = 0
+    temp = -1
     for inst in tree:
         # print('\n')
-        # print(inst)
+        #print(inst)
         # print(temp)
-        # print(inst.data)
+        #print(inst.data)
         if inst.data == 'f_for':
             temp = calc_number_of_expression_list(inst.children[2])
         
-        elif inst.data == 'expressions_list':
+        if inst.data == 'f_print':
             temp = temp - 1
-
-        if temp == 0 or temp == 2: 
+            if temp < 0:
+                run_instructions(inst)
+        else :
             run_instructions(inst)
         
 def calc_number_of_expression_list(expression_list):
@@ -302,7 +321,11 @@ ana_gram_1 = '''
         nbr2 := 1312.;
         nb3 := .22;
         liste := ('un', 'deux', 'trois');
-        for num in ('quatre', 'cinq', 'six') 
+        print liste;
+        for num in liste
+            do print num;
+        endfor;
+        for num in ('quatre', 'cinq', 'six')
             do print num;
         endfor;
         }}
@@ -314,11 +337,12 @@ ana_gram_2 = '''
         <bal>
         texte1
         {{
-        liste := ('un', 'deux', 'trois');
-        for num in ('quatre', 'cinq', 'six') 
+        poisson := 'viande';
+        chiffres := ('un', 'deux', 'trois');
+        for num in chiffres
             do 
                 print 'hi';
-                print 'jax';
+                print num;
         endfor;
         print 'Hi Mama';
         }}
@@ -327,5 +351,5 @@ ana_gram_2 = '''
 '''
 
 if __name__ == '__main__':
-    run(ana_gram_2)
+    run(ana_gram_1)
     # main()

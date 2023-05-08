@@ -143,8 +143,33 @@ def run_instructions(t):
         print(string_constructor_2(t.children))
 
     elif t.data == 'f_for':
-        #print(t.children[1])
+
+        type_of_list = t.children[1].children[0].data   # string_list_interior or variable
+        in_list = []
+        if type_of_list == 'string_list_interior':
+            print('inside string_list_interior')
+            print('\n')
+            children = t.children[1].children[0].children
+            if len(children) == 2 :
+                while len(children) == 2:
+                    in_list.append(string_constructor_2(children[0].children))
+                    children = children[1].children
+            if len(children) == 1 :
+                in_list.append(string_constructor_2(children[0].children))
+
+            print(in_list)
+
+        elif type_of_list == 'variable':
+            print('variable')
+        
+        save_variables = variables
+
+        ## for loop
+
+        print('\n')
+        for_variable_name = string_constructor_from_token(t.children[0].children)
         print(str_list_constructor(t.children[1].children[0]))
+        print('\n')
 
 def string_constructor_2(list):
     string = ""
@@ -255,12 +280,27 @@ ana_gram_1 = '''
         nbr2 := 1312.;
         nb3 := .22;
         liste := ('un', 'deux', 'trois');
-        for num in ('quatre', 'cinq', 'six') do print num; endfor;
+        for num in ('quatre', 'cinq', 'six') 
+            do print num;
+        endfor;
+        }}
+        texte2
+        </bal>
+'''
+
+ana_gram_2 = '''
+        <bal>
+        texte1
+        {{
+        liste := ('un', 'deux', 'trois');
+        for num in ('quatre', 'cinq', 'six') 
+            do print num;
+        endfor;
         }}
         texte2
         </bal>
 '''
 
 if __name__ == '__main__':
-    run(ana_gram_1)
+    run(ana_gram_2)
     # main()

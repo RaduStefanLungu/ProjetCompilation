@@ -49,6 +49,7 @@ dumbo_grammar = """
         | variable ":=" string_expression                                   -> f_assign_var
         | variable ":=" string_list                                         -> f_assign_var
         | variable ":=" numbers                                             -> f_assign_var
+        | variable ":=" operation                                           -> f_assign_var
     for_block:
         | "for" variable "in" string_list "do" expressions_list "endfor"    -> f_for
         | "for" variable "in" variable "do" expressions_list "endfor"       -> f_for
@@ -67,6 +68,12 @@ dumbo_grammar = """
     float2: integer "."
     float3: "." integer
     integer: /[0-9]/+
+    operation: numbers operator numbers
+        | variable operator numbers
+        | numbers operator variable
+        | variable operator variable
+    operator: /\+/ | /-/ | /\*/ | /\//
+
     
     %import common.WS
     %ignore WS
@@ -145,6 +152,35 @@ def run_instructions(t):
                         children = children[1].children
                 if len(children) == 1 :
                     the_value.append(string_constructor_2(children[0].children))
+            elif x.data == 'operation':
+                if x.children[0].data == 'int':
+                    number1 = int_constructor(x.children[0].children)
+                elif x.children[0].data == 'flt1':
+                    number1 = float1_constructor(x.children[0].children)
+                elif x.children[0].data == 'flt2':
+                    number1 = float2_constructor(x.children[0].children)
+                elif x.children[0].data == 'flt3':
+                    number1 = float3_constructor(x.children[0].children)
+                else:
+                    number1 = variables.get(string_constructor_from_token(x.children[0].children))
+                if x.children[2].data == 'int':
+                    number2 = int_constructor(x.children[2].children)
+                elif x.children[2].data == 'flt1':
+                    number2 = float1_constructor(x.children[2].children)
+                elif x.children[2].data == 'flt2':
+                    number2 = float2_constructor(x.children[2].children)
+                elif x.children[2].data == 'flt3':
+                    number2 = float3_constructor(x.children[2].children)
+                else:
+                    number2 = variables.get(string_constructor_from_token(x.children[2].children))
+                if x.children[1].children[0].value == '+':
+                    the_value = number1 + number2
+                elif x.children[1].children[0].value == '-':
+                    the_value = number1 - number2
+                elif x.children[1].children[0].value == '*':
+                    the_value = number1 * number2
+                else:
+                    the_value = number1 / number2
 
         variables[the_variable] = the_value
 
@@ -328,6 +364,14 @@ ana_gram_1 = '''
         for num in ('quatre', 'cinq', 'six')
             do print num;
         endfor;
+        op1 := 1 + 2;
+        print op1;
+        op2 := op1 * 4.;
+        print op2;
+        op3 := 0.5 - op2;
+        print op3;
+        op4 := op2 / op1;
+        print op4; 
         }}
         texte2
         </bal>
@@ -351,5 +395,5 @@ ana_gram_2 = '''
 '''
 
 if __name__ == '__main__':
-    run(ana_gram_2)
+    run(ana_gram_1)
     # main()

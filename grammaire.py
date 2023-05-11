@@ -40,25 +40,30 @@ dumbo_grammar = """
         | programme2
     programme2: dumbo_bloc | dumbo_bloc programme
     txt: charactere+                                                        -> f_text
-    charactere: /[A-Za-z_0-9]/ | /</ | />/ | /:/ | /\// | /=/ | /"/ | /,/
+    charactere: /[A-Za-z_0-9]/ | /</ | />/ | /:/ | /\// | /=/ | /"/ | /,/ | /\./
     dumbo_bloc: "{{" expressions_list "}}"
     expressions_list: expression ";" expressions_list
         | expression ";"
     expression: "print" string_expression                                   -> f_print
-        | for_block                                                         
+        | for_block
+        | if_block
         | variable ":=" string_expression                                   -> f_assign_var
         | variable ":=" string_list                                         -> f_assign_var
         | variable ":=" numbers                                             -> f_assign_var
         | variable ":=" operation                                           -> f_assign_var
-    for_block:
-        | "for" variable "in" string_list "do" expressions_list "endfor"    -> f_for
-        | "for" variable "in" variable "do" expressions_list "endfor"       -> f_for
+        | variable ":=" boolean                                             -> f_assign_var
+        | variable ":=" logic_operation                                     -> f_assign_var
+        | variable ":=" comparison                                          -> f_assign_var
+    for_block: "for" variable "in" string_list "do" expressions_list "endfor"     -> f_for
+        | "for" variable "in" variable "do" expressions_list "endfor"             -> f_for
+    if_block: "if" condition "do" expressions_list "endif"                        -> f_if
     string_expression: string
         | variable
-        | string_expression "." string_expression
+        | string "." string_expression
+        | variable "." string_expression
     string_list: "(" string_list_interior ")"
     string_list_interior: string | string "," string_list_interior
-    variable: ( /_/ | /[A-Za-z]/) /[A-Za-z_0-9]/*
+    variable: ( /_/ | /[a-z]/) /[A-Za-z_0-9]/*
     string: "'" charactere* "'"
     numbers: integer                                                        -> int
         | float1                                                            -> flt1
@@ -68,13 +73,27 @@ dumbo_grammar = """
     float2: integer "."
     float3: "." integer
     integer: /[0-9]/+
+    boolean: /True/ | /False/
     operation: numbers operator numbers
         | variable operator numbers
         | numbers operator variable
         | variable operator variable
     operator: /\+/ | /-/ | /\*/ | /\//
+    logic_operation: boolean logic_operator boolean
+        | variable logic_operator boolean
+        | boolean logic_operator variable
+        | variable logic_operator variable
+    logic_operator: /&/ | /\^/
+    comparison: numbers comparison_operator numbers
+        | variable comparison_operator numbers
+        | numbers comparison_operator variable
+        | variable comparison_operator variable
+    comparison_operator: /</ | />/ | /=/ | /!=/
+    condition: boolean
+        | variable
+        | logic_operation
+        | comparison
 
-    
     %import common.WS
     %ignore WS
 """
@@ -99,16 +118,19 @@ variables = {}
 #PRINTER = "template"
 
 def run_instructions(t):
-    # print(t)
     if t.data == 'f_print':
-        #print(t)
-        st = t.children[0].children[0]
-        #print(st.data)
+        s = t.children[0]
+        while len(s.children) == 2:
+            st = s.children[0]
+            if st.data == 'string':
+                print(string_constructor_2(st.children))
+            elif st.data == 'variable':
+                print(variables.get(string_constructor_from_token(st.children)))
+            s = s.children[1]
+        st = s.children[0]
         if st.data == 'string':
-            #print(st.children[0].children)
             print(string_constructor_2(st.children))
         elif st.data == 'variable':
-            #print(st.children[0].children)
             print(variables.get(string_constructor_from_token(st.children)))
 
     elif t.data == 'f_assign_var':
@@ -153,34 +175,13 @@ def run_instructions(t):
                 if len(children) == 1 :
                     the_value.append(string_constructor_2(children[0].children))
             elif x.data == 'operation':
-                if x.children[0].data == 'int':
-                    number1 = int_constructor(x.children[0].children)
-                elif x.children[0].data == 'flt1':
-                    number1 = float1_constructor(x.children[0].children)
-                elif x.children[0].data == 'flt2':
-                    number1 = float2_constructor(x.children[0].children)
-                elif x.children[0].data == 'flt3':
-                    number1 = float3_constructor(x.children[0].children)
-                else:
-                    number1 = variables.get(string_constructor_from_token(x.children[0].children))
-                if x.children[2].data == 'int':
-                    number2 = int_constructor(x.children[2].children)
-                elif x.children[2].data == 'flt1':
-                    number2 = float1_constructor(x.children[2].children)
-                elif x.children[2].data == 'flt2':
-                    number2 = float2_constructor(x.children[2].children)
-                elif x.children[2].data == 'flt3':
-                    number2 = float3_constructor(x.children[2].children)
-                else:
-                    number2 = variables.get(string_constructor_from_token(x.children[2].children))
-                if x.children[1].children[0].value == '+':
-                    the_value = number1 + number2
-                elif x.children[1].children[0].value == '-':
-                    the_value = number1 - number2
-                elif x.children[1].children[0].value == '*':
-                    the_value = number1 * number2
-                else:
-                    the_value = number1 / number2
+                the_value = resolve_operation(x)
+            elif x.data == 'boolean':
+                the_value = boolean_value(x)
+            elif x.data == 'logic_operation':
+                the_value = resolve_logic_operation(x)
+            elif x.data == 'comparison':
+                the_value = compare(x)
 
         variables[the_variable] = the_value
 
@@ -189,8 +190,6 @@ def run_instructions(t):
 
     elif t.data == 'f_for':
         for_variable_name = string_constructor_from_token(t.children[0].children)
-        #print(for_variable_name)
-        #print(t.children[1].data)
         type_of_list = t.children[1].data   # string_list_interior or variable
         in_list = []
         if type_of_list == 'string_list':
@@ -201,7 +200,6 @@ def run_instructions(t):
                     children = children[1].children
             if len(children) == 1 :
                 in_list.append(string_constructor_2(children[0].children))
-
         elif type_of_list == 'variable':
             liste = variables.get(string_constructor_from_token(t.children[1].children))
             for e in liste:
@@ -224,6 +222,23 @@ def run_instructions(t):
                 del variables[k]
             for k in save_variables.keys():
                 variables[k] = save_variables[k]
+    elif t.data == 'f_if':
+        type_of_condition = t.children[0].children[0].data
+        if type_of_condition == 'boolean':
+            condition = boolean_value(t.children[0].children[0])
+        elif type_of_condition == 'variable':
+            condition = variables.get(string_constructor_from_token(t.children[0].children[0].children))
+        elif type_of_condition == 'logic_operation':
+            condition = resolve_logic_operation(t.children[0].children[0])
+        elif type_of_condition == 'comparison':
+            condition = compare(t.children[0].children[0])
+        if condition:
+            cur = t.children[1]
+            while len(cur.children) == 2:
+                run_instructions(cur.children[0])
+                cur = cur.children[1]
+            run_instructions(cur.children[0])
+
 
 def string_constructor_2(list):
     string = ""
@@ -259,20 +274,91 @@ def float3_constructor(numbers):
     int1 = integer_constructor(numbers[0].children[0])
     return(float("." + int1))
 
-"""
-def string_list_constructor(list_inter):
-    #print(list_inter)
-    string = ""
-    #print(list_inter.children[0])
-    string += string_constructor_2(list_inter.children[0].children)
-    if len(list_inter.children) == 2:
-        string += ", "
-        string += string_list_constructor(list_inter.children[1])
-    return(string)
+def resolve_operation(x):
+    if x.children[0].data == 'int':
+        number1 = int_constructor(x.children[0].children)
+    elif x.children[0].data == 'flt1':
+        number1 = float1_constructor(x.children[0].children)
+    elif x.children[0].data == 'flt2':
+        number1 = float2_constructor(x.children[0].children)
+    elif x.children[0].data == 'flt3':
+        number1 = float3_constructor(x.children[0].children)
+    else:
+        number1 = variables.get(string_constructor_from_token(x.children[0].children))
+    if x.children[2].data == 'int':
+        number2 = int_constructor(x.children[2].children)
+    elif x.children[2].data == 'flt1':
+        number2 = float1_constructor(x.children[2].children)
+    elif x.children[2].data == 'flt2':
+        number2 = float2_constructor(x.children[2].children)
+    elif x.children[2].data == 'flt3':
+        number2 = float3_constructor(x.children[2].children)
+    else:
+        number2 = variables.get(string_constructor_from_token(x.children[2].children))
+    if x.children[1].children[0].value == '+':
+        return number1 + number2
+    elif x.children[1].children[0].value == '-':
+        return number1 - number2
+    elif x.children[1].children[0].value == '*':
+        return number1 * number2
+    else:
+        return number1 / number2
 
-def str_list_constructor(list_inter):
-    return("(" + string_list_constructor(list_inter) + ")")
-"""
+def boolean_value(x):
+    if x.children[0].value == 'True':
+        return True
+    else:
+        return False
+
+def resolve_logic_operation(x):
+    if x.children[0].data == 'boolean':
+        if x.children[0].children[0].value == 'True':
+            cond1 = True
+        else:
+            cond1 = False
+    else :
+        cond1 = variables.get(string_constructor_from_token(x.children[0].children))
+    if x.children[2].data == 'boolean':
+        if x.children[2].children[0].value == 'True':
+            cond2 = True
+        else:
+            cond2 = False
+    else :
+        cond2 = variables.get(string_constructor_from_token(x.children[2].children))
+    if x.children[1].children[0].value == '&':
+        return cond1 and cond2
+    if x.children[1].children[0].value == '^':
+        return cond1 or cond2
+    
+def compare(x):
+    if x.children[0].data == 'int':
+        number1 = int_constructor(x.children[0].children)
+    elif x.children[0].data == 'flt1':
+        number1 = float1_constructor(x.children[0].children)
+    elif x.children[0].data == 'flt2':
+        number1 = float2_constructor(x.children[0].children)
+    elif x.children[0].data == 'flt3':
+        number1 = float3_constructor(x.children[0].children)
+    else:
+        number1 = variables.get(string_constructor_from_token(x.children[0].children))
+    if x.children[2].data == 'int':
+        number2 = int_constructor(x.children[2].children)
+    elif x.children[2].data == 'flt1':
+        number2 = float1_constructor(x.children[2].children)
+    elif x.children[2].data == 'flt2':
+        number2 = float2_constructor(x.children[2].children)
+    elif x.children[2].data == 'flt3':
+        number2 = float3_constructor(x.children[2].children)
+    else:
+        number2 = variables.get(string_constructor_from_token(x.children[2].children))
+    if x.children[1].children[0].value == '>':
+        return number1 > number2
+    elif x.children[1].children[0].value == '<':
+        return number1 < number2
+    elif x.children[1].children[0].value == '=':
+        return number1 == number2
+    else:
+        return number1 != number2
 
 def run(program):
     dumbo_tree = dumbo_parser.parse(program)
@@ -287,10 +373,11 @@ def run_tree(tree):
     for inst in tree:
         # print('\n')
         #print(inst)
-        # print(temp)
         #print(inst.data)
         if inst.data == 'f_for':
             temp = calc_number_of_expression_list(inst.children[2])
+        elif inst.data == 'f_if':
+            temp = calc_number_of_expression_list(inst.children[1])
         
         if inst.data == 'f_print' or inst.data == 'f_assign_var':
             temp = temp - 1
@@ -298,6 +385,7 @@ def run_tree(tree):
                 run_instructions(inst)
         else :
             run_instructions(inst)
+        #print(temp)
         
 def calc_number_of_expression_list(expression_list):
     if len(expression_list.children) == 2 :
@@ -305,16 +393,46 @@ def calc_number_of_expression_list(expression_list):
     else:
         return 1
 
+sentence3 = '''
+        {{
+            nom := 'De Pril';
+            prenom := 'Julie';
+            cours := ('Math discretes');
+            print nom . prenom . nom;
+        }}
+'''
 
-sentence = '''<html>Case:{{
-            _Axel := ('Baby','Shark') ;
-            _Jinx := _Axel;
-            i:= 0;
-            for nom in _Axel do
-                print '<a href="'.nom.'">'.nom.'</a>';
-            endfor;
-
-            }}</html>
+sentence = '''
+        {{
+            nom := 'Brouette';
+            prenom := 'Quentin';
+            cours := ('Logique 1', 'Logique 2', 'Algebre 1', 'Math elem .');
+        }}
+            <html>
+            <head><title>{{print nom . ' ' . prenom;}}</title></head>
+            <body>
+            <h1>{{print nom . ' ' . prenom;}}</h1>
+            Cours : {{for c in cours do
+            print c . ', ';
+            endfor;}}
+            </body>
+            </html>
+            '''
+sentence4 = '''
+        {{
+            nom := 'De Pril';
+            prenom := 'Julie';
+            cours := ('Math discretes');
+        }}
+            <html>
+            <head><title>{{print nom . ' ' . prenom;}}</title></head>
+            <body>
+            <h1>{{print nom . ' ' . prenom;}}</h1>
+            Cours : {{for c in cours do
+            print c . ', ';
+            endfor;}}
+            </body>
+            </html>
             '''
 
 sentence2 = '''
@@ -333,15 +451,6 @@ sentence2 = '''
                 }}
         </body>
     </html>
-'''
-
-sentence3 = '''
-        {{
-            nom := 'De Pril';
-            prenom := 'Julie';
-            cours := ('Math discretes');
-        }}
-
 '''
 
 ana_gram_1 = '''
@@ -394,6 +503,52 @@ ana_gram_2 = '''
         </bal>
 '''
 
+sentence5 = '''
+            {{
+            cond1 := False;
+            cond2 := True;
+            cond3 := cond1 & cond2;
+            print cond3;
+            cond4 := cond1 ^ cond2;
+            print cond4;
+            }}
+'''
+sentence6 = '''
+            {{
+            number1 := 5.9;
+            number2 := 6.;
+            cond1 := number1 != number2;
+            print cond1;
+            cond2 := number2 > .34;
+            print cond2;
+            cond3 := 10 < number1;
+            print cond3;
+            cond4 := 10 = 10.0;
+            print cond4;
+            }}
+'''
+sentence7 = '''
+        {{
+        if 1 = 1
+        do print 'hello';
+        endif;
+        cond1 := True;
+        cond2 := False;
+        if cond1 ^ cond2
+        do
+            num1 := 56;
+            num2 := 65;
+            greater := num2 > num1;
+            print greater;
+        endif;
+        if cond1 & cond2
+        do
+            print 'perdu';
+        endif;
+        print 'fin';
+        }}
+'''
+
 if __name__ == '__main__':
-    run(ana_gram_1)
+    run(sentence7)
     # main()

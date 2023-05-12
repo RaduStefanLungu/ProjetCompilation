@@ -1,5 +1,10 @@
+#Le choix de Lark est arbitraire par rapport à Ply. Nous avions entendu dire qu'il était plus pratique d'utilisation.
+#De plus cela nous permettait d'apprendre à utiliser une librairie de fonctions supplémentaire.
 from lark import Lark
 
+#Définition de tous les différents regex nécessaires pour l'analyse grammaticale.
+#Ils correspondent bien à la grammaire décrite dans l'énoncé avec plusieurs regex ajoutés pour que
+#la grammaire soit non-ambigue et soit plus pratique dans l'analyse syntaxique avec l'arbre créé par Lark.
 dumbo_grammar = """
     programme: txt
         | txt programme2
@@ -64,12 +69,24 @@ dumbo_grammar = """
     %ignore WS
 """
 
+#C'est le parser par défaut de Lark, les différents paramètres servent à dire que programme est l'axiome et qu'en cas d'ambiguité,
+#tous les chemins possibles devraient être explorer. On aurait alors plusieurs output (en cas d'erreur).
 dumbo_parser = Lark(dumbo_grammar,start='programme', ambiguity='explicit')
 dumbo = dumbo_parser.parse
 
+#Variables est le tableau de variable qui sera rempli au fur-et-à-mesure de l'exécution du compilateur.
+#Le choix de la structure dictionnaire en Python est pratique
+#car elle agit comme une table de hachage simplifiée dans son utilisation.
 variables = {}
+
+#String qui sera renvoyé en réponse à l'utilisateur.
+#Il est rempli à chaque fois qu'une instruction est un texte ou est un print.
 output = ""
 
+#Fonction d'analyse syntaxique qui est appelée à chaque fois que le parser détecte un nouveau regex pour l'évaluer.
+#En fonction du type de regex, il va suivre certaines instructions et appeler plusieurs fonctions afin de donner
+#une réponse adéquate correspondant à l'instruction. Les variables globales variables et output sont remplies
+#à chaque étape où cela est nécessaire ou demandé.
 def run_instructions(t):
     global output
     if t.data == 'f_print':
@@ -189,32 +206,40 @@ def run_instructions(t):
                 cur = cur.children[1]
             run_instructions(cur.children[0])
 
+#Fonction qui renvoie un string qui correspond à la valeur de chaque charactère qui compose
+#ce string rassemblées en une seule variable. Elle est utilisée pour toutes les chaines de caractère sauf les noms de variable
 def string_constructor_2(list):
     string = ""
     for tree in list:
         string += tree.children[0].value
     return string
 
+#Fonction similaire pour les noms de variables.
+#Elle est nécessaire car les noms de variables ont leur propre grammaire qui est moins libre que celle des string.
 def string_constructor_from_token(token_list):
     string = ""
     for token in token_list:
         string += token.value
     return string
 
+#Fonction qui renvoie un string correspondant aux charactères lus qui forment le nombre entier.
 def integer_constructor(numbers):
     string = ""
     for number in numbers.children:
         string += number.value
     return string
 
+#Fonction qui renvoie un int transtypé à partir du string obtenu ci-dessus.
 def int_constructor(numbers):
     return int(integer_constructor(numbers[0]))
 
+#Fonction qui renvoie un float en partant du principe qu'un float est composé d'un int à gauche et d'un int à droite du point.
 def float1_constructor(numbers):
     int1 = integer_constructor(numbers[0].children[0])
     int2 = integer_constructor(numbers[0].children[1])
     return(float(int1 + "." + int2))
 
+#Les deux suivantes sont pour les cas où le float n'est composé que d'un int qui est soit à gauche, soit à droite du point.
 def float2_constructor(numbers):
     int1 = integer_constructor(numbers[0].children[0])
     return(float(int1 + "."))
@@ -223,6 +248,8 @@ def float3_constructor(numbers):
     int1 = integer_constructor(numbers[0].children[0])
     return(float("." + int1))
 
+#Fonction qui va renvoyer un int ou un float correspondant au résultat de l'opération demandée.
+#Par défaut c'est un float qui sera renvoyé même si il existe une version entière, exemple : 4.5 / 1.5 = 3.0
 def resolve_operation(x):
     if x.children[0].data == 'int':
         number1 = int_constructor(x.children[0].children)
@@ -253,12 +280,16 @@ def resolve_operation(x):
     else:
         return number1 / number2
 
+#Renvoie un booléen correspondant à la valeur lue.
 def boolean_value(x):
     if x.children[0].value == 'True':
         return True
     else:
         return False
 
+#Résoud les opérations de logique or et and. Ne résoud pas les cas avec plus de deux termes comme a and b or c.
+#Par soucis d'ambiguité, les opérations and et or s'écrivent & et ^.
+#Fonction renvoyant le booléan correspondant au résultat.
 def resolve_logic_operation(x):
     if x.children[0].data == 'boolean':
         if x.children[0].children[0].value == 'True':
@@ -279,6 +310,9 @@ def resolve_logic_operation(x):
     if x.children[1].children[0].value == '^':
         return cond1 or cond2
     
+#Fonction évaluant les comparaisons de deux nombres. Les nombres peuvent être entiers ou flottants car
+#un transtypage automatique sera appliqué pour résoudre tout conflit. Par exemple : 42 = 42.0
+#Fonction renvoyant le booléen correspondant au résultat.
 def compare(x):
     if x.children[0].data == 'int':
         number1 = int_constructor(x.children[0].children)
@@ -309,12 +343,16 @@ def compare(x):
     else:
         return number1 != number2
 
+#Fonction principale qui s'occupe de l'analyse grammaticale à l'aide d'un parser et des regex définis plus haut.
+#Elle donne ensuite en paramètres l'arbres ainsi construit à la fonction suivante.
 def run(program):
     dumbo_tree = dumbo_parser.parse(program)
-
     run_tree(dumbo_tree.iter_subtrees_topdown())
 
-
+#Fonction qui va s'occuper de l'analyse syntaxique en passant chaque instruction qui correspond à un regex
+#à la fonction run_instruction qui va effectuer la tâche qui y correspond.
+#La variable temp sert à ne pas répetter deux fois chaque instruction dans un for ou dans un if.
+#Ceci aurait probablement pu être éviter avec une meilleure analyse grammaticale.
 def run_tree(tree):
     temp = -1
     for inst in tree:
@@ -329,13 +367,16 @@ def run_tree(tree):
                 run_instructions(inst)
         else :
             run_instructions(inst)
-        
+
+#Fonction qui renvoie le nombre d'expression simple contenues dans l'expression_list d'un for ou d'un if.
 def calc_number_of_expression_list(expression_list):
     if len(expression_list.children) == 2 :
         return 1 + calc_number_of_expression_list(expression_list.children[1])
     else:
         return 1
 
+#Instructions appelées en premières qui se charge de l'input et de l'output fournis et donné à l'utilisateur.
+#L'output sera rempli pendant l'analyse syntaxique.
 if __name__ == '__main__':
     import sys
     variable = open(sys.argv[1]).read()

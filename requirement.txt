@@ -5,5 +5,8 @@ Avoir une version récente de Python
 Le code a été réalisé avec Python 3.9 cependant Python 3.7 devrait également fonctionner
 
 Lancer le programme dans un invite de commande (dans le répertoire contenant les fichiers) de la façon suivante :
-dumbo.py texte1.txt texte2.txt
+python dumbo.py texte1.txt texte2.txt
 Avec texte1 et texte2 remplacés par les fichiers correspondant aux variables et à la structure du programme
+
+Sur un IDE type Visual Studio Code, la commande est simplifiée comme ceci :
+python dumbo.py texte1.txt texte2.txt

@@ -1,0 +1,9 @@
+Avoir une version récente de Lark
+Au besoin, utiliser la commande pip install Lark
+
+Avoir une version récente de Python
+Le code a été réalisé avec Python 3.9 cependant Python 3.7 devrait également fonctionner
+
+Lancer le programme dans un invite de commande (dans le répertoire contenant les fichiers) de la façon suivante :
+dumbo.py texte1.txt texte2.txt
+Avec texte1 et texte2 remplacés par les fichiers correspondant aux variables et à la structure du programme

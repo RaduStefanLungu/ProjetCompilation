@@ -138,10 +138,6 @@ def run_instructions(t):
         the_variable_0 = t.children[0]
         the_value_0 = t.children[1]
 
-        # Left here for debugging purposes.
-        the_variable = None
-        the_value = None
-
         for x in the_variable_0.iter_subtrees():
             if x.data == 'variable':
                 the_variable = string_constructor_from_token(x.children)
@@ -490,14 +486,13 @@ ana_gram_2 = '''
         <bal>
         texte1
         {{
-        poisson := 'viande';
-        chiffres := ('un', 'deux', 'trois');
-        for num in chiffres
-            do 
-                print 'hi';
-                valor := num;
+        for i in ('un', 'deux', 'trois')
+        do
+            print i;
+            for j in ('quatre', 'cinq', 'six')
+            do print j;
+            endfor;
         endfor;
-        print 'Hi Mama';
         }}
         texte2
         </bal>
@@ -536,10 +531,9 @@ sentence7 = '''
         cond2 := False;
         if cond1 ^ cond2
         do
-            num1 := 56;
-            num2 := 65;
-            greater := num2 > num1;
-            print greater;
+            for i in ('un', 'deux', 'trois')
+                do print i;
+            endfor;
         endif;
         if cond1 & cond2
         do
@@ -548,7 +542,26 @@ sentence7 = '''
         print 'fin';
         }}
 '''
+sentence8 = '''
+{{nom := 'Jinx';
+liste_photo := ('un', 'deux', 'trois');}}
+<html>
+<head><title>{{print nom;}}</title></head>
+<body>
+<h1>{{print nom;}}</h1>
+{{
+i := 0;
+for nom in liste_photo do
+if i > 0 do print ', '; endif;
+print '<a href="' . nom . '"> ' . nom . '</a>';
+i := i + 1;
+endfor;
+}}
+<br/>
+Il y a {{print i;}} dans l album {{print nom;}}.
+</body>
+</html>
+'''
 
 if __name__ == '__main__':
-    run(sentence7)
-    # main()
+    run(ana_gram_2)
